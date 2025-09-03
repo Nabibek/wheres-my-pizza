@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"log"
-	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -26,29 +24,35 @@ func main() {
 
 	// Declare queue
 	q, err := ch.QueueDeclare(
-		"hello", // queue name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		"hello",
+		false,
+		false,
+		false,
+		false,
+		nil,
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Consume messages
+	msgs, err := ch.Consume(
+		q.Name,
+		"",
+		true,  // auto-ack
+		false, // exclusive
+		false,
+		false,
+		nil,
+	)
+	failOnError(err, "Failed to register a consumer")
 
-	body := "Hello from Go with amqp091!"
-	err = ch.PublishWithContext(ctx,
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
-		})
-	failOnError(err, "Failed to publish a message")
+	forever := make(chan bool)
 
-	log.Printf(" [x] Sent %s\n", body)
+	go func() {
+		for d := range msgs {
+			log.Printf(" [x] Received: %s", d.Body)
+		}
+	}()
+
+	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
+	<-forever
 }
