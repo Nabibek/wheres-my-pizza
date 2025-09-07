@@ -1,58 +1,57 @@
+// main.go - Setting up the dependencies and starting the HTTP server
 package main
 
 import (
 	"log"
-
-	amqp "github.com/rabbitmq/amqp091-go"
+	"net/http"
+	"restaurant-system/adapters/http"
+	"restaurant-system/adapters/postgres"
+	"restaurant-system/adapters/rabbitmq"
+	"restaurant-system/service"
+	"github.com/streadway/amqp"
+	"gorm.io/gorm"
+	"gorm.io/driver/postgres"
 )
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
-	}
-}
-
 func main() {
+	// Connect to PostgreSQL
+	db, err := gorm.Open(postgres.Open("your_database_url"), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+
 	// Connect to RabbitMQ
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ:", err)
+	}
+	channel, err := conn.Channel()
+	if err != nil {
+		log.Fatal("Failed to create RabbitMQ channel:", err)
+	}
 
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	// Set up the repositories and services
+	orderRepo := &postgres.PostgresOrderRepository{DB: db}
+	orderItemRepo := &postgres.PostgresOrderItemRepository{DB: db}
+	orderStatusLogRepo := &postgres.PostgresOrderStatusLogRepository{DB: db}
+	rabbitMQPublisher := &rabbitmq.RabbitMQPublisher{
+		Connection: conn,
+		Channel:    channel,
+	}
 
-	// Declare queue
-	q, err := ch.QueueDeclare(
-		"hello",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to declare a queue")
+	orderService := &service.OrderService{
+		OrderRepository:   orderRepo,
+		OrderItemRepo:     orderItemRepo,
+		StatusLogRepo:     orderStatusLogRepo,
+		RabbitMQPublisher: rabbitMQPublisher,
+	}
 
-	// Consume messages
-	msgs, err := ch.Consume(
-		q.Name,
-		"",
-		true,  // auto-ack
-		false, // exclusive
-		false,
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to register a consumer")
+	// Set up HTTP handler
+	orderHandler := &http.OrderHandler{
+		OrderService: orderService,
+	}
 
-	forever := make(chan bool)
+	http.HandleFunc("/orders", orderHandler.CreateOrder)
 
-	go func() {
-		for d := range msgs {
-			log.Printf(" [x] Received: %s", d.Body)
-		}
-	}()
-
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-	<-forever
+	log.Fatal(http.ListenAndServe(":3000", nil))
 }
