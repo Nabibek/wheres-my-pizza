@@ -1,46 +1,31 @@
-// adapters/rabbitmq/rabbitmq_publisher.go
-package rabbit
+// internal/rabbitmq/client.go
+package rabbitmq
 
 import (
-	"encoding/json"
-	"restaurant-system/domain"
-	"restaurant-system/ports"
-	"github.com/streadway/amqp"
+    "log"
+    "github.com/rabbitmq/amqp091-go"
 )
 
-type RabbitMQPublisher struct {
-	Connection *amqp.Connection
-	Channel    *amqp.Channel
+type Client struct {
+    Conn    *amqp091.Connection
+    Channel *amqp091.Channel
 }
 
-func (r *RabbitMQPublisher) PublishOrder(order domain.Order) error {
-	message := map[string]interface{}{
-		"order_number":    order.OrderNumber,
-		"customer_name":   order.CustomerName,
-		"order_type":      order.OrderType,
-		"table_number":    order.TableNumber,
-		"delivery_address": order.DeliveryAddress,
-		"items":           order.Items,
-		"total_amount":    order.TotalAmount,
-		"priority":        order.Priority,
-	}
+func NewClient(url string) (*Client, error) {
+    conn, err := amqp091.Dial(url)
+    if err != nil {
+        return nil, err
+    }
 
-	body, err := json.Marshal(message)
-	if err != nil {
-		return err
-	}
+    ch, err := conn.Channel()
+    if err != nil {
+        return nil, err
+    }
 
-	// Create a persistent message
-	err = r.Channel.Publish(
-		"orders_topic",               // Exchange
-		"kitchen." + order.OrderType + "." + string(order.Priority), // Routing key
-		true,                         // Mandatory
-		false,                        // Immediate
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent,
-			Body:         body,
-		},
-	)
-	return err
+    return &Client{Conn: conn, Channel: ch}, nil
+}
+
+func (c *Client) Close() {
+    c.Channel.Close()
+    c.Conn.Close()
 }

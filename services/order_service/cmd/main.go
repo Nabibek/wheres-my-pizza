@@ -55,3 +55,24 @@ func main() {
 
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }
+
+// func main() {
+//     url := os.Getenv("RABBITMQ_URL")
+//     if url == "" {
+//         url = "amqp://guest:guest@localhost:5672/"
+//     }
+
+//     client, err := rabbitmq.NewClient(url)
+//     if err != nil {
+//         log.Fatal("Failed to connect to RabbitMQ:", err)
+//     }
+//     defer client.Close()
+
+//     log.Println("Order service started")
+
+//     // Example: publish a test order
+//     err = client.PublishOrder([]byte(`{"order":"pizza"}`), "kitchen.takeout.1")
+//     if err != nil {
+//         log.Fatal("Failed to publish order:", err)
+//     }
+// }

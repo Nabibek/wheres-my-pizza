@@ -1,18 +1,96 @@
 version: "3.9"
 
 services:
+  # PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: restaurant_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - restaurant_net
+
+  # RabbitMQ with Management UI
   rabbitmq:
-    image: rabbitmq:management
-    container_name: rabbitmq
-    ports: 
-      - "5672:5672"
-      - "15672:15672"
+    image: rabbitmq:3-management
+    container_name: restaurant_rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-     - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672"     # messaging
+      - "15672:15672"   # admin UI
+    networks:
+      - restaurant_net
+
+  # Order Service
+  order-service:
+    build: ./order-service
+    container_name: order_service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/orders_db?sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "3000:3000"
+    networks:
+      - restaurant_net
+
+  # Kitchen Service
+  kitchen-service:
+    build: ./kitchen-service
+    container_name: kitchen_service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/kitchen_db?sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "3001:3000"
+    networks:
+      - restaurant_net
+
+  # Delivery Service
+  delivery-service:
+    build: ./delivery-service
+    container_name: delivery_service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/delivery_db?sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "3002:3000"
+    networks:
+      - restaurant_net
+
+  # Payment Service
+  payment-service:
+    build: ./payment-service
+    container_name: payment_service
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/payment_db?sslmode=disable
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "3003:3000"
+    networks:
+      - restaurant_net
 
 volumes:
-  rabbitmq_data:
-    driver: local
+  postgres_data:
+
+networks:
+  restaurant_net:
+    driver: bridge
