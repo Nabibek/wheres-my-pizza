@@ -1,5 +1,4 @@
-// main.go - Setting up the dependencies and starting the HTTP server
-package main
+package orderservice
 
 import (
 	"log"
@@ -8,12 +7,11 @@ import (
 	"restaurant-system/adapters/postgres"
 	"restaurant-system/adapters/rabbitmq"
 	"restaurant-system/service"
+
 	"github.com/streadway/amqp"
-	"gorm.io/gorm"
-	"gorm.io/driver/postgres"
 )
 
-func main() {
+func OrderService() {
 	// Connect to PostgreSQL
 	db, err := gorm.Open(postgres.Open("your_database_url"), &gorm.Config{})
 	if err != nil {

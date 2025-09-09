@@ -1,5 +1,5 @@
 // order.go - Core domain entity for the order
-package domain
+package models
 
 import (
 	"time"

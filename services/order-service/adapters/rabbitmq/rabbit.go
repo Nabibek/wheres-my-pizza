@@ -1,4 +1,3 @@
-// internal/rabbitmq/client.go
 package rabbitmq
 
 import (
@@ -25,8 +24,8 @@ func NewClient(url string) (*Client, error) {
     return &Client{Conn: conn, Channel: ch}, nil
 }
 
-func ExchangeDeclare(ch *amqp091.Channel){
-    err = ch.ExchangeDeclare(
+func ExchangeDeclare(ch *amqp091.Channel) error{
+    err := ch.ExchangeDeclare(
         "orders_topic", // name
         "topic",        // type
         true,           // durable
@@ -38,6 +37,8 @@ func ExchangeDeclare(ch *amqp091.Channel){
     if err != nil {
         log.Fatal("Failed to declare exchange:", err)
     }
+
+    return err
 }
 
 func QueueDeclare(ch *amqp091.Channel){
@@ -53,7 +54,6 @@ func QueueDeclare(ch *amqp091.Channel){
         log.Fatal("Failed to declare queue:", err)
     }
 }
-
 
 func (c *Client) Close() {
     c.Channel.Close()

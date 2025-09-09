@@ -1,32 +1,39 @@
-// adapters/postgre/order_repository.go
-package postgre
+package db
 
 import (
-	"restaurant-system/domain"
-	"restaurant-system/ports"
-	"gorm.io/gorm"
+	"context"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PostgresOrderRepository struct {
-	DB *gorm.DB
-}
+func NewPostgresPool() (*pgxpool.Pool, error) {
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASS")
+	dbName := os.Getenv("DB_NAME")
 
-func (r *PostgresOrderRepository) SaveOrder(order domain.Order) error {
-	return r.DB.Create(&order).Error
-}
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		dbUser, dbPass, dbHost, dbPort, dbName,
+	)
 
-type PostgresOrderItemRepository struct {
-	DB *gorm.DB
-}
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse config: %w", err)
+	}
 
-func (r *PostgresOrderItemRepository) SaveOrderItem(item domain.OrderItem) error {
-	return r.DB.Create(&item).Error
-}
+	// Connection tuning (example)
+	cfg.MaxConns = 10
+	cfg.MinConns = 2
+	cfg.MaxConnLifetime = time.Hour
 
-type PostgresOrderStatusLogRepository struct {
-	DB *gorm.DB
-}
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect: %w", err)
+	}
 
-func (r *PostgresOrderStatusLogRepository) SaveOrderStatusLog(log domain.OrderStatusLog) error {
-	return r.DB.Create(&log).Error
+	return pool, nil
 }
