@@ -3,8 +3,8 @@ package service
 
 import (
 	"fmt"
-	"restaurant-system/domain"
-	"restaurant-system/ports"
+	"restaurant-system/services/order-service/domain/models"
+	"restaurant-system/services/order-service/domain/ports"
 	"time"
 )
 
@@ -15,10 +15,10 @@ type OrderService struct {
 	RabbitMQPublisher ports.RabbitMQPublisher
 }
 
-func (s *OrderService) CreateOrder(customerName, orderType string, items []domain.OrderItem, tableNumber *int, deliveryAddress *string) (domain.Order, error) {
+func (s *OrderService) CreateOrder(customerName, orderType string, items []models.OrderItem, tableNumber *int, deliveryAddress *string) (models.Order, error) {
 	// Validate order
 	if err := validateOrder(customerName, orderType, items, tableNumber, deliveryAddress); err != nil {
-		return domain.Order{}, err
+		return models.Order{}, err
 	}
 
 	// Calculate total amount and priority
@@ -26,24 +26,24 @@ func (s *OrderService) CreateOrder(customerName, orderType string, items []domai
 	priority := calculatePriority(totalAmount)
 
 	// Generate order number
-	orderNumber := generateOrderNumber()
+	// orderNumber := generateOrderNumber()
 
 	// Start a transaction for database operations
-	order := domain.Order{
-		CustomerName:   customerName,
-		OrderType:      orderType,
-		TableNumber:    tableNumber,
+	order := models.Order{
+		CustomerName:    customerName,
+		OrderType:       orderType,
+		TableNumber:     tableNumber,
 		DeliveryAddress: deliveryAddress,
-		TotalAmount:    totalAmount,
-		Priority:       priority,
-		Status:         "received",
-		Items:          items,
+		TotalAmount:     totalAmount,
+		Priority:        priority,
+		Status:          "received",
+		Items:           items,
 	}
 
 	// Insert order into the database
 	err := s.OrderRepository.SaveOrder(order)
 	if err != nil {
-		return domain.Order{}, err
+		return models.Order{}, err
 	}
 
 	// Insert items into the order_items table
@@ -51,12 +51,12 @@ func (s *OrderService) CreateOrder(customerName, orderType string, items []domai
 		item.OrderID = order.ID
 		err := s.OrderItemRepo.SaveOrderItem(item)
 		if err != nil {
-			return domain.Order{}, err
+			return models.Order{}, err
 		}
 	}
 
 	// Log the status
-	statusLog := domain.OrderStatusLog{
+	statusLog := models.OrderStatusLog{
 		OrderID:   order.ID,
 		Status:    "received",
 		ChangedBy: "system",
@@ -64,25 +64,25 @@ func (s *OrderService) CreateOrder(customerName, orderType string, items []domai
 	}
 	err = s.StatusLogRepo.SaveOrderStatusLog(statusLog)
 	if err != nil {
-		return domain.Order{}, err
+		return models.Order{}, err
 	}
 
 	// Publish to RabbitMQ
 	err = s.RabbitMQPublisher.PublishOrder(order)
 	if err != nil {
-		return domain.Order{}, err
+		return models.Order{}, err
 	}
 
 	return order, nil
 }
 
 // Helper functions
-func validateOrder(customerName, orderType string, items []domain.OrderItem, tableNumber *int, deliveryAddress *string) error {
+func validateOrder(customerName, orderType string, items []models.OrderItem, tableNumber *int, deliveryAddress *string) error {
 	// Add input validation logic here (length checks, etc.)
 	return nil
 }
 
-func calculateTotalAmount(items []domain.OrderItem) float64 {
+func calculateTotalAmount(items []models.OrderItem) float64 {
 	var total float64
 	for _, item := range items {
 		total += item.Price * float64(item.Quantity)

@@ -1,61 +1,63 @@
 package rabbitmq
 
 import (
-    "log"
-    "github.com/rabbitmq/amqp091-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type Client struct {
-    Conn    *amqp091.Connection
-    Channel *amqp091.Channel
+	conn    *amqp.Connection
+	channel *amqp.Channel
 }
 
 func NewClient(url string) (*Client, error) {
-    conn, err := amqp091.Dial(url)
-    if err != nil {
-        return nil, err
-    }
+	conn, err := amqp.Dial(url)
+	if err != nil {
+		return nil, err
+	}
 
-    ch, err := conn.Channel()
-    if err != nil {
-        return nil, err
-    }
+	ch, err := conn.Channel()
+	if err != nil {
+		return nil, err
+	}
 
-    return &Client{Conn: conn, Channel: ch}, nil
+	return &Client{conn: conn, channel: ch}, nil
 }
 
-func ExchangeDeclare(ch *amqp091.Channel) error{
-    err := ch.ExchangeDeclare(
-        "orders_topic", // name
-        "topic",        // type
-        true,           // durable
-        false,          // auto-delete
-        false,          // internal
-        false,          // no-wait
-        nil,            // args
-    )
-    if err != nil {
-        log.Fatal("Failed to declare exchange:", err)
-    }
-
-    return err
+func (c *Client) DeclareExchange(name string) error {
+	return c.channel.ExchangeDeclare(
+		name,    // name
+		"topic", // type
+		true,    // durable
+		false,   // auto-delete
+		false,   // internal
+		false,   // no-wait
+		nil,     // args
+	)
 }
 
-func QueueDeclare(ch *amqp091.Channel){
-    q, err := ch.QueueDeclare(
-        "kitchen_takeout", // queue name
-        true,              // durable
-        false,             // delete when unused
-        false,             // exclusive
-        false,             // no-wait
-        nil,               // arguments
-    )
-    if err != nil {
-        log.Fatal("Failed to declare queue:", err)
-    }
+func (c *Client) DeclareAndBindQueue(queue, exchange, routingKey string) error {
+	_, err := c.channel.QueueDeclare(
+		queue,
+		true,  // durable
+		false, // auto-delete
+		false, // exclusive
+		false, // no-wait
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	return c.channel.QueueBind(
+		queue,
+		routingKey,
+		exchange,
+		false,
+		nil,
+	)
 }
 
 func (c *Client) Close() {
-    c.Channel.Close()
-    c.Conn.Close()
+	c.channel.Close()
+	c.conn.Close()
 }

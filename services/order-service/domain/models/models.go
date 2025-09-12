@@ -1,4 +1,3 @@
-// order.go - Core domain entity for the order
 package models
 
 import (

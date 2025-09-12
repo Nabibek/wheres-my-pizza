@@ -1,8 +1,9 @@
-// ports/rabbitmq.go - Port for RabbitMQ Publisher
 package ports
 
-import "restaurant-system/domain"
+import (
+	"restaurant-system/services/order-service/domain/models"
+)
 
 type RabbitMQPublisher interface {
-	PublishOrder(order domain.Order) error
+	PublishOrder(order models.Order) error
 }

@@ -1,18 +1,27 @@
 package web
 
-type WebHandler struct{}
+import (
+	"encoding/json"
+	"net/http"
+	"restaurant-system/services/order-service/domain/models"
+	"restaurant-system/services/order-service/domain/service"
+)
 
-func NewWebHandler() *WebHandler {
-	return &WebHandler{}
+type WebHandler struct{
+	OrderService service.OrderService
+}
+
+func NewWebHandler(OrderService service.OrderService) *WebHandler {
+	return &WebHandler{OrderService: OrderService}
 }
 
 func (h *WebHandler) HandleOrder(w http.ResponseWriter, r *http.Request) {
 	var request struct {
-		CustomerName   string          `json:"customer_name"`
-		OrderType      string          `json:"order_type"`
-		Items          []domain.OrderItem `json:"items"`
-		TableNumber    *int            `json:"table_number,omitempty"`
-		DeliveryAddress *string        `json:"delivery_address,omitempty"`
+		CustomerName    string             `json:"customer_name"`
+		OrderType       string             `json:"order_type"`
+		Items           []models.OrderItem `json:"items"`
+		TableNumber     *int               `json:"table_number,omitempty"`
+		DeliveryAddress *string            `json:"delivery_address,omitempty"`
 	}
 
 	// Decode request body
@@ -32,7 +41,7 @@ func (h *WebHandler) HandleOrder(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"order_number": order.OrderNumber,
 		"status":       order.Status,
-		 "total_amount": order.TotalAmount,
+		"total_amount": order.TotalAmount,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

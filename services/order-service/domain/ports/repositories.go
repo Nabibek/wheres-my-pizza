@@ -1,16 +1,17 @@
-// ports/repositories.go - Ports for database operations
 package ports
 
-import "restaurant-system/domain"
+import (
+	"restaurant-system/services/order-service/domain/models"
+)
 
 type OrderRepository interface {
-	SaveOrder(order domain.Order) error
+	SaveOrder(order models.Order) error
 }
 
 type OrderItemRepository interface {
-	SaveOrderItem(item domain.OrderItem) error
+	SaveOrderItem(item models.OrderItem) error
 }
 
 type OrderStatusLogRepository interface {
-	SaveOrderStatusLog(log domain.OrderStatusLog) error
+	SaveOrderStatusLog(log models.OrderStatusLog) error
 }

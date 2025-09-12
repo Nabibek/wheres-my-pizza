@@ -6,6 +6,6 @@ import (
 
 func NewRouter(handler *WebHandler) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /orders", WebHandler.HandleOrder)
+	mux.HandleFunc("POST /orders", handler.HandleOrder)
 	return mux
 }
