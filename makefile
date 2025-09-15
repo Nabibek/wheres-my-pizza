@@ -17,3 +17,7 @@ push:
 
 clean:
 	docker-compose down -v
+
+updatego:
+	chmod +x s.sh
+	./s.sh
