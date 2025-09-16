@@ -61,5 +61,24 @@ if ! grep -q "export PATH=.*\$GOROOT/bin" "$SHELL_RC"; then
     echo 'export PATH=$GOROOT/bin:$PATH' >> "$SHELL_RC"
 fi
 
+source ~/.bashrc
+
 echo "Go $GO_VERSION installed successfully!"
 echo "Please run 'source $SHELL_RC' or restart your terminal to apply changes."
+
+
+
+# export GOTOOLCHAIN=local
+# go env -w GOPROXY=https://proxy.golang.org,direct
+# go mod tidy
+
+
+# export GOROOT=$HOME/Downloads/go
+# export GOPATH=$HOME/Downloads/go-workspace
+# export GOBIN=$GOPATH/bin
+
+
+# source ~/.bashrc
+
+# which go
+# go version

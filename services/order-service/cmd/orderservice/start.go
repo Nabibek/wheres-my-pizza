@@ -1,46 +1,73 @@
 package orderservice
 
 import (
-	// "fmt"
 	"log"
-	// "restaurant-system/services/order-service/domain/service"
+	"net/http"
+	"os"
+	"restaurant-system/services/order-service/adapters/postgres"
 	"restaurant-system/services/order-service/adapters/rabbitmq"
-	// "restaurant-system/services/order-service/adapters/postgres"
+	"restaurant-system/services/order-service/adapters/web"
+	"restaurant-system/services/order-service/domain/service"
+	"time"
 )
 
 func OrderService() {
-	// Connect to RabbitMQ
-	client, err := rabbitmq.NewClient("amqp://guest:guest@localhost:5672/")
+	// Connect to PostgreSQL
+	dbPool, err := postgres.NewPostgresPool()
 	if err != nil {
-		log.Fatal("Failed to connect:", err)
+		log.Fatal("Failed to connect to PostgreSQL:", err)
 	}
-	defer client.Close()
+	defer dbPool.Close()
 
-	err = client.DeclareExchange("orders_topic")
+	// Connect to RabbitMQ
+	rabbitClient, err := rabbitmq.NewClient("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ:", err)
+	}
+	defer rabbitClient.Close()
+
+	// Declare exchange
+	err = rabbitClient.DeclareExchange("orders_topic")
 	if err != nil {
 		log.Fatal("Failed to declare exchange:", err)
 	}
 
-	message := `{"order_number": "ORD_001", "customer_name": "Alice"}`
-	err = client.Publish("orders_topic", "kitchen.takeout.1", message)
-	if err != nil {
-		log.Fatal("Failed to publish:", err)
+	// Initialize repositories
+	orderRepo := &postgres.PostgresOrderRepository{DB: dbPool}
+	orderItemRepo := &postgres.PostgresOrderItemRepository{DB: dbPool}
+	statusLogRepo := &postgres.PostgresOrderStatusLogRepository{DB: dbPool}
+
+	// Initialize RabbitMQ publisher
+	rabbitPublisher := &rabbitmq.RabbitMQPublisher{Client: rabbitClient}
+
+	// Initialize order service
+	orderService := service.OrderService{
+		OrderRepository:   orderRepo,
+		OrderItemRepo:     orderItemRepo,
+		StatusLogRepo:     statusLogRepo,
+		RabbitMQPublisher: rabbitPublisher,
 	}
 
-	// // Set up the repositories and services
-	// orderRepo := &postgres.PostgresOrderRepository{DB: db}
-	// orderItemRepo := &postgres.PostgresOrderItemRepository{DB: db}
-	// orderStatusLogRepo := &postgres.PostgresOrderStatusLogRepository{DB: db}
-	// rabbitMQPublisher := &rabbitmq.RabbitMQPublisher{
-	// 	Connection: conn,
-	// 	Channel:    channel,
-	// }
+	// Initialize web handler
+	webHandler := web.NewWebHandler(orderService)
+	router := web.NewRouter(webHandler)
 
-	// orderService := &service.OrderService{
-	// 	OrderRepository:   orderRepo,
-	// 	OrderItemRepo:     orderItemRepo,
-	// 	StatusLogRepo:     orderStatusLogRepo,
-	// 	RabbitMQPublisher: rabbitMQPublisher,
-	// }
+	// Start HTTP server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
+	}
 
+	server := &http.Server{
+		Addr:         ":" + port,
+		Handler:      router,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	log.Printf("Order service started on port %s", port)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal("Failed to start server:", err)
+	}
 }

@@ -2,12 +2,14 @@ package web
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"restaurant-system/services/order-service/domain/models"
 	"restaurant-system/services/order-service/domain/service"
+	"strings"
 )
 
-type WebHandler struct{
+type WebHandler struct {
 	OrderService service.OrderService
 }
 
@@ -16,6 +18,9 @@ func NewWebHandler(OrderService service.OrderService) *WebHandler {
 }
 
 func (h *WebHandler) HandleOrder(w http.ResponseWriter, r *http.Request) {
+	// Set content type
+	w.Header().Set("Content-Type", "application/json")
+
 	var request struct {
 		CustomerName    string             `json:"customer_name"`
 		OrderType       string             `json:"order_type"`
@@ -26,14 +31,27 @@ func (h *WebHandler) HandleOrder(w http.ResponseWriter, r *http.Request) {
 
 	// Decode request body
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+		log.Printf("Invalid request: %v", err)
+		http.Error(w, `{"error": "Invalid JSON format"}`, http.StatusBadRequest)
 		return
 	}
 
 	// Create order
-	order, err := h.OrderService.CreateOrder(request.CustomerName, request.OrderType, request.Items, request.TableNumber, request.DeliveryAddress)
+	order, err := h.OrderService.CreateOrder(
+		request.CustomerName,
+		request.OrderType,
+		request.Items,
+		request.TableNumber,
+		request.DeliveryAddress,
+	)
 	if err != nil {
-		http.Error(w, "Failed to create order", http.StatusInternalServerError)
+		log.Printf("Failed to create order: %v", err)
+		// Check if it's a validation error
+		if strings.Contains(err.Error(), "validation") {
+			http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)
+		} else {
+			http.Error(w, `{"error": "Failed to create order"}`, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -44,6 +62,6 @@ func (h *WebHandler) HandleOrder(w http.ResponseWriter, r *http.Request) {
 		"total_amount": order.TotalAmount,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
