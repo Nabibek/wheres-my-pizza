@@ -3,20 +3,30 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
 func NewPostgresPool() (*pgxpool.Pool, error) {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
 	dbPass := os.Getenv("DB_PASS")
 	dbName := os.Getenv("DB_NAME")
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+	if dbUser == "" || dbPass == "" || dbHost == "" || dbPort == "" || dbName == "" {
+		return nil, fmt.Errorf("missing required database env vars (got: user=%q host=%q port=%q db=%q)",
+			dbUser, dbHost, dbPort, dbName)
+	}
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s",
 		dbUser, dbPass, dbHost, dbPort, dbName,
 	)
 
@@ -37,3 +47,7 @@ func NewPostgresPool() (*pgxpool.Pool, error) {
 
 	return pool, nil
 }
+
+// func init() {
+
+// }
