@@ -45,7 +45,7 @@ func (s *OrderService) CreateOrder(customerName, orderType string, items []model
 	}
 
 	// Insert order into the database
-	err = s.OrderRepository.SaveOrder(order)
+	err = s.OrderRepository.SaveOrder(&order)
 	if err != nil {
 		return models.Order{}, fmt.Errorf("failed to save order: %w", err)
 	}

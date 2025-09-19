@@ -5,7 +5,7 @@ import (
 )
 
 type OrderRepository interface {
-	SaveOrder(order models.Order) error
+	SaveOrder(order *models.Order) error
 }
 
 type OrderItemRepository interface {

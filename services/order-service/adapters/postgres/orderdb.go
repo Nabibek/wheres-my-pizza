@@ -11,7 +11,7 @@ type PostgresOrderRepository struct {
 	DB *pgxpool.Pool
 }
 
-func (r *PostgresOrderRepository) SaveOrder(order models.Order) error {
+func (r *PostgresOrderRepository) SaveOrder(order *models.Order) error {
 	query := `
 		INSERT INTO orders (number, customer_name, type, table_number, delivery_address, total_amount, priority, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
