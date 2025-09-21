@@ -27,7 +27,7 @@ func (h *WebHandler) GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	status, err := h.TrackingService.GetOrderStatus(orderNumber)
+	status, err := h.TrackingService.GetOrderStatus(r.Context(), orderNumber)
 	if err != nil {
 		log.Printf("Error getting order status: %v", err)
 		http.Error(w, "Order not found", http.StatusNotFound)
@@ -49,7 +49,7 @@ func (h *WebHandler) GetOrderHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	history, err := h.TrackingService.GetOrderHistory(orderNumber)
+	history, err := h.TrackingService.GetOrderHistory(r.Context(), orderNumber)
 	if err != nil {
 		log.Printf("Error getting order history: %v", err)
 		http.Error(w, "Order not found", http.StatusNotFound)
@@ -63,7 +63,7 @@ func (h *WebHandler) GetOrderHistory(w http.ResponseWriter, r *http.Request) {
 func (h *WebHandler) GetWorkersStatus(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request received: %s %s", r.Method, r.URL.Path)
 
-	workers, err := h.TrackingService.GetWorkersStatus()
+	workers, err := h.TrackingService.GetWorkersStatus(r.Context())
 	if err != nil {
 		log.Printf("Error getting workers status: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)

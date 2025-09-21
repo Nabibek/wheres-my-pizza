@@ -1,9 +1,7 @@
 package ports
 
-import (
-	"restaurant-system/services/order-service/domain/models"
-)
+import "restaurant-system/services/order-service/domain/models"
 
 type RabbitMQPublisher interface {
-	PublishOrder(order models.Order) error
+	PublishOrder(order *models.OrderMessage) error
 }

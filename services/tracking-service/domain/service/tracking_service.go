@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"log"
 	"restaurant-system/services/tracking-service/domain/models"
 	"restaurant-system/services/tracking-service/domain/ports"
@@ -8,8 +9,8 @@ import (
 )
 
 type TrackingService struct {
-	OrderRepo   ports.OrderRepository
-	WorkerRepo  ports.WorkerRepository
+	OrderRepo  ports.OrderRepository
+	WorkerRepo ports.WorkerRepository
 }
 
 func NewTrackingService(orderRepo ports.OrderRepository, workerRepo ports.WorkerRepository) *TrackingService {
@@ -19,19 +20,19 @@ func NewTrackingService(orderRepo ports.OrderRepository, workerRepo ports.Worker
 	}
 }
 
-func (s *TrackingService) GetOrderStatus(orderNumber string) (models.OrderStatusResponse, error) {
+func (s *TrackingService) GetOrderStatus(ctx context.Context, orderNumber string) (models.OrderStatusResponse, error) {
 	log.Printf("Getting status for order: %s", orderNumber)
-	return s.OrderRepo.GetOrderByNumber(orderNumber)
+	return s.OrderRepo.GetOrderByNumber(ctx, orderNumber)
 }
 
-func (s *TrackingService) GetOrderHistory(orderNumber string) ([]models.StatusHistory, error) {
+func (s *TrackingService) GetOrderHistory(ctx context.Context, orderNumber string) ([]models.StatusHistory, error) {
 	log.Printf("Getting history for order: %s", orderNumber)
-	return s.OrderRepo.GetOrderStatusHistory(orderNumber)
+	return s.OrderRepo.GetOrderStatusHistory(ctx, orderNumber)
 }
 
-func (s *TrackingService) GetWorkersStatus() ([]models.WorkerStatus, error) {
+func (s *TrackingService) GetWorkersStatus(ctx context.Context) ([]models.WorkerStatus, error) {
 	log.Printf("Getting status for all workers")
-	workers, err := s.WorkerRepo.GetAllWorkersStatus()
+	workers, err := s.WorkerRepo.GetAllWorkersStatus(ctx)
 	if err != nil {
 		return nil, err
 	}

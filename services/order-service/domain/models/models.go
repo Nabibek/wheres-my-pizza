@@ -4,25 +4,42 @@ import (
 	"time"
 )
 
-type CreateOrderRequest struct {
-	CustomerName    string        `json:"customer_name"`
-	OrderType       string        `json:"order_type"`
-	TableNumber     *int          `json:"table_number,omitempty"`
-	DeliveryAddress *string       `json:"delivery_address,omitempty"`
-	Items           []OrderItem   `json:"items"`
-}
-
+// rabbit
 type OrderMessage struct {
-	OrderNumber     string       `json:"order_number"`
-	CustomerName    string       `json:"customer_name"`
-	OrderType       string       `json:"order_type"`
-	TableNumber     *int         `json:"table_number,omitempty"`
-	DeliveryAddress *string      `json:"delivery_address,omitempty"`
-	Items           []OrderItem  `json:"items"`
-	TotalAmount     float64      `json:"total_amount"`
-	Priority        int          `json:"priority"`
+	OrderNumber     string
+	CustomerName    string
+	OrderType       string
+	TableNumber     *int
+	DeliveryAddress *string
+	Items           []OrderItemRequest
+	TotalAmount     float64
+	Priority        int
 }
 
+// принимаем с апи
+type OrderCreatedRequest struct {
+	CustomerName    string             `json:"customer_name"`
+	OrderType       string             `json:"order_type"` // dine-in / delivery
+	TableNumber     *int               `json:"table_number,omitempty"`
+	DeliveryAddress *string            `json:"delivery_address,omitempty"`
+	Items           []OrderItemRequest `json:"items"`
+}
+
+//  принимаем с апи
+type OrderItemRequest struct {
+	Name     string  `json:"name"`
+	Quantity int     `json:"quantity"`
+	Price    float64 `json:"price"`
+}
+
+// ответ на апи
+type CreateOrderResponse struct {
+	OrderNumber string
+	Status      string
+	TotalAmount float64
+}
+
+// db
 type Order struct {
 	ID              int
 	CreatedAt       time.Time
@@ -35,9 +52,12 @@ type Order struct {
 	TotalAmount     float64
 	Priority        int
 	Status          string
+	ProcessedBy     *string
 	Items           []OrderItem
+	CompletedAt     *time.Time
 }
 
+// db
 type OrderItem struct {
 	ID        int
 	OrderID   int
@@ -47,12 +67,13 @@ type OrderItem struct {
 	CreatedAt time.Time // Add this field
 }
 
+// db
 type OrderStatusLog struct {
 	ID        int
 	OrderID   int
 	Status    string
 	ChangedBy string
 	ChangedAt time.Time
-	Notes     string
+	Notes     *string
 	CreatedAt time.Time // Add this field
 }

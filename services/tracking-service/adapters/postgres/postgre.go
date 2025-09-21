@@ -3,36 +3,40 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"os"
+	"restaurant-system/services/tracking-service/config"
+	"restaurant-system/services/tracking-service/utils/logger"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func NewPostgresPool() (*pgxpool.Pool, error) {
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PASS")
-	dbName := os.Getenv("DB_NAME")
+func NewPostgresPool(cfg config.DatabaseConfig, serviceName string) (*pgxpool.Pool, error) {
+	log := logger.New(serviceName)
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		dbUser, dbPass, dbHost, dbPort, dbName,
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	cfg, err := pgxpool.ParseConfig(dsn)
+	poolConfig, err := pgxpool.ParseConfig(cfg.ConnectionString())
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse config: %w", err)
+		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	cfg.MaxConns = 10
-	cfg.MinConns = 2
-	cfg.MaxConnLifetime = time.Hour
+	// Connection tuning
+	poolConfig.MaxConns = 20
+	poolConfig.MinConns = 5
+	poolConfig.MaxConnLifetime = time.Hour
+	poolConfig.MaxConnIdleTime = 30 * time.Minute
 
-	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect: %w", err)
+		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
+	// Test connection
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	log.Info("db_connected", "Connected to PostgreSQL database", "")
 	return pool, nil
 }
